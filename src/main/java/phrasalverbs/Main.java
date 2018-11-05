@@ -3,134 +3,151 @@ package phrasalverbs;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 // @formatter:off
 public class Main {
     public static void main(String[] args) {
-        // Phrase.phrases.stream().map(t -> t.getMeaning()).forEach(System.out::println);
-
-        //        Phrase.phrases.stream()
-        //        .map(t -> t.getVerb() + " " + t.getPreposition() + ": " + t.getMeaning())
-        //        .forEach(System.out::println);
-        //        Phrase.phrases.stream()
-        //        .collect(Collectors.groupingBy(Phrase::getVerb))
-        //        .entrySet().forEach(entry -> {
-        //            System.out.println(entry.getKey());
-        //            entry.getValue().forEach(t -> System.out.println("\t" + t.getPreposition() + ":\t" + t.getMeaning()));
-        //        });
         System.out.println("-------------------- LEARNING ENGLISH -------------------------");
         System.out.println("(C) 2018 Antonio Vázquez Araújo  antoniovazquezaraujo@gmail.com");
         System.out.println("---------------------------------------------------------------");
         System.out.println();
         System.out.println("Phrasal verbs:");
         System.out.println();
-        askByPreposition();
-        askByVerb();
+        ask(PhrasePart.PREPOSITION);
+        //        ask(PhrasePart.VERB);
     }
-    //    private static void askByPreposition() {
-    //        Phrase.phrases.stream()
-    //        .collect(Collectors.groupingBy(Phrase::getPreposition))
-    //        .entrySet().forEach(entry -> {
-    //            System.out.println("------------- " + entry.getKey()+ " -------------------");
-    //            entry.getValue().forEach(t -> {
-    //                showPhrase(t, HiddenPart.VERB);
-    //                try {
-    //                    new BufferedReader(new InputStreamReader(System.in)).readLine();
-    //                } catch (IOException e) {
-    //                    e.printStackTrace();
-    //                }
-    //            });
-    //        });
-    //    }
-    private static void askByPreposition() {
-        Set<Phrase> correct = new HashSet<>();
+    private static void ask(PhrasePart part) {
         Phrase.phrases
         .stream()
-        .collect(Collectors.groupingBy(Phrase::getPreposition))
-        .entrySet().forEach(entry -> {
-            correct.clear();
-            correct.addAll(entry.getValue());
-            while(!correct.isEmpty()){
-                System.out.println("------------- " + entry.getKey()+ " :"+ correct.size() +" -------------------");
-                entry.getValue()
-                .stream()
-                .filter(t-> correct.contains(t))
-                .forEach(t -> {
-                    showPhrase(t, new PhrasePart[]{PhrasePart.WILDCARD, PhrasePart.PREPOSITION, PhrasePart.MEANING});
+        .collect(Collectors.groupingBy(t-> t.getPart(part)))
+        .entrySet()
+        .forEach(x->{
+            Score partsScore = askParts(x, part);
+            showScore(partsScore);
+            System.out.println("-------------------------------------------------------------------------------");
+        });
+    }
+    private static Score askParts(Entry<String, List<Phrase>> entry, PhrasePart part) {
+        Score partsScore = new Score(entry.getKey());
+        entry.getValue()
+        .stream()
+        .forEach(t -> {
+            askPart(partsScore, t, part);
+        });
+        return partsScore;
+    }
+
+    private static void askPart(Score score, Phrase t, PhrasePart part) {
+        PhrasePart counterPart = t.getCounterPart(part);
+        PhrasePart[] wildCardPhraseParts = null;
+        PhrasePart[] completeCardPhraseParts = null;
+        PhrasePart[] noMeaningCardPhraseParts = null;
+        completeCardPhraseParts = new PhrasePart[]{PhrasePart.MEANING, PhrasePart.VERB, PhrasePart.PREPOSITION};
+        noMeaningCardPhraseParts = new PhrasePart[]{PhrasePart.VERB, PhrasePart.PREPOSITION, PhrasePart.NONE};
+        switch(counterPart){
+        case MEANING:
+            wildCardPhraseParts = new PhrasePart[]{PhrasePart.VERB, PhrasePart.PREPOSITION, PhrasePart.WILDCARD};
+            break;
+        case PREPOSITION:
+            wildCardPhraseParts = new PhrasePart[]{PhrasePart.VERB, PhrasePart.WILDCARD, PhrasePart.MEANING};
+            break;
+        case VERB:
+            wildCardPhraseParts = new PhrasePart[]{PhrasePart.WILDCARD, PhrasePart.PREPOSITION, PhrasePart.MEANING};
+            break;
+        default:
+            break;
+        }
+        showPhrase(t, wildCardPhraseParts);
+        System.out.print(": ");
+        try {
+            String answer = readAnswer();
+            if(answer.equals(t.getPart(counterPart))){
+                System.out.print("OK:");
+                score.addHit(t.getPart(counterPart));
+                showPhrase(t, completeCardPhraseParts);
+            }else{
+                System.out.print("ERROR: ");
+                score.addFail(t.getPart(part));
+                showPhrase(t, noMeaningCardPhraseParts);
+                System.out.println();
+                for (int times = 0; times<5; times++){
+                    clearScreen();
+                    System.out.println("Memoriza la frase: ");
+                    System.out.print(t.getMeaning());
                     System.out.print(": ");
-                    try {
-                        String answer = new BufferedReader(new InputStreamReader(System.in)).readLine();
-                        if(answer.equals(t.getVerb())){
-                            System.out.print("OK:");
-                            showPhrase(t, new PhrasePart[]{PhrasePart.MEANING, PhrasePart.VERB, PhrasePart.PREPOSITION});
-                            correct.remove(t);
-                        }else{
-                            System.out.print("ERROR: ");
-                            showPhrase(t, new PhrasePart[]{PhrasePart.VERB, PhrasePart.PREPOSITION, PhrasePart.NONE});
-                            System.out.println();
-                            while (true){
-                                clearScreen();
-                                System.out.println("Teclea la frase completa: ");
-                                System.out.print(t.getMeaning());
-                                System.out.print(": ");
-                                showPhrase(t, new PhrasePart[]{PhrasePart.VERB, PhrasePart.PREPOSITION, PhrasePart.NONE});
-                                System.out.println();
-                                showTimer(50);
-                                clearScreen();
-                                System.out.println();
-                                answer = new BufferedReader(new InputStreamReader(System.in)).readLine();
-                                if(answer.equals(t.getMeaning()+": " + t.getVerb()+ " "+ t.getPreposition())){
-                                    System.out.print("OK:");
-                                    showPhrase(t, new PhrasePart[]{PhrasePart.MEANING, PhrasePart.VERB, PhrasePart.PREPOSITION});
-                                    correct.remove(t);
-                                    break;
-                                }
-                            }
-                        }
-                        System.out.println();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    showPhrase(t, noMeaningCardPhraseParts);
+                    System.out.println();
+                    showTimer(50);
+                    clearScreen();
+                    System.out.println("Ahora escríbela: ");
+                    answer = readAnswer();
+                    if(answer.equals(t.getMeaning()+": " + t.getVerb()+ " "+ t.getPreposition())){
+                        System.out.print("OK:");
+                        score.addHit(t.getPart(counterPart));
+                        showPhrase(t, completeCardPhraseParts);
+                        break;
+                    }else{
+                        score.addFail(t.getPart(counterPart));
                     }
-                });
+                }
             }
-        });
+            System.out.println();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-    private static void askByVerb() {
-        Set<Phrase> correct = new HashSet<>();
-        Phrase.phrases
-        .stream()
-        .collect(Collectors.groupingBy(Phrase::getVerb))
-        .entrySet().forEach(entry -> {
-            correct.clear();
-            correct.addAll(entry.getValue());
-            while(!correct.isEmpty()){
-                System.out.println("------------- " + entry.getKey()+ " :"+ correct.size() +" -------------------");
-                entry.getValue()
-                .stream()
-                .filter(t-> correct.contains(t))
-                .forEach(t -> {
-                    showPhrase(t, new PhrasePart[]{PhrasePart.VERB, PhrasePart.PREPOSITION, PhrasePart.MEANING});
-                    try {
-                        String answer = new BufferedReader(new InputStreamReader(System.in)).readLine();
-                        if(answer.equals(t.getPreposition())){
-                            System.out.print("OK: ");
-                            correct.remove(t);
-                        }else{
-                            System.out.print("ERROR: ");
-                        }
-                        showPhrase(t, new PhrasePart[]{PhrasePart.VERB, PhrasePart.PREPOSITION, PhrasePart.MEANING});
-                        System.out.println();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+    private static void askVerb(Score score, Phrase t) {
+        showPhrase(t, new PhrasePart[]{PhrasePart.WILDCARD, PhrasePart.PREPOSITION, PhrasePart.MEANING});
+        System.out.print(": ");
+        try {
+            String answer = readAnswer();
+            if(answer.equals(t.getVerb())){
+                System.out.print("OK:");
+                score.addHit(t.getVerb());
+                showPhrase(t, new PhrasePart[]{PhrasePart.MEANING, PhrasePart.VERB, PhrasePart.PREPOSITION});
+            }else{
+                System.out.print("ERROR: ");
+                score.addFail(t.getVerb());
+                showPhrase(t, new PhrasePart[]{PhrasePart.VERB, PhrasePart.PREPOSITION, PhrasePart.NONE});
+                System.out.println();
+                for (int times = 0; times<5; times++){
+                    clearScreen();
+                    System.out.println("Teclea la frase completa: ");
+                    System.out.print(t.getMeaning());
+                    System.out.print(": ");
+                    showPhrase(t, new PhrasePart[]{PhrasePart.VERB, PhrasePart.PREPOSITION, PhrasePart.NONE});
+                    System.out.println();
+                    showTimer(50);
+                    clearScreen();
+                    System.out.println();
+                    answer = readAnswer();
+                    if(answer.equals(t.getMeaning()+": " + t.getVerb()+ " "+ t.getPreposition())){
+                        System.out.print("OK:");
+                        score.addHit(t.getVerb());
+                        showPhrase(t, new PhrasePart[]{PhrasePart.MEANING, PhrasePart.VERB, PhrasePart.PREPOSITION});
+                        break;
+                    }else{
+                        score.addFail(t.getVerb());
                     }
-                });
+                }
             }
-        });
+            System.out.println();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+    private static String readAnswer() throws IOException {
+        return new BufferedReader(new InputStreamReader(System.in)).readLine();
+    }
+    private static void showScore(Score score){
+        System.out.println("                                                      [ "+ score +" ]");
+    }
+
     // @formatter:on
+
     public static void showPhrase(Phrase phrase, PhrasePart[] parts) {
         String[] partsContent = new String[3];
         for (int n = 0; n < parts.length; n++) {
@@ -167,9 +184,9 @@ public class Main {
         System.out.print(ret);
     }
 
-    private static void showTimer(int time) {
+    private static void showTimer(int times) {
         char[] chars = { '-', '\\', '|', '/', '-', '\\', '|', '/' };
-        for (int n = 0; n < time; n++) {
+        for (int n = 0; n < times; n++) {
             System.out.print(chars[n % 8]);
             try {
                 Thread.sleep(50);
@@ -186,11 +203,8 @@ public class Main {
     }
 }
 
-/*
- * Partes que se desean mostrar y en qué orden MEANING, VERB, PREPOSITION hacer esto: get away VERB, PREPOSITION,
- * MEANING get away: hacer esto WILDCARD, PREPOSITION, MEANING "?" away: hacer esto VERB, WILDCARD, MEANING get "?" :
- * hacer esto VERB, WILDCARD, NONE get "?" WILDCARD, PREPOSITION, NONE "?" away NONE, NONE, MEANING hacer esto VERB,
- * NONE, NONE get NONE, PREPOSITION, NONE away NONE, NONE, MEANING hacer esto
+/**
+ * Parts of a phrase, to show, not show or show as a question mark
  */
 
 enum PhrasePart {

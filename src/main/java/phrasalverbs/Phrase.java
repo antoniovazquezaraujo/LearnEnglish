@@ -9,6 +9,29 @@ public class Phrase {
     private String preposition;
     private String meaning;
 
+    public String getPart(PhrasePart part) {
+        switch (part) {
+        case MEANING:
+            return this.meaning;
+        case PREPOSITION:
+            return this.preposition;
+        case VERB:
+            return this.verb;
+        default:
+            return null;
+        }
+    }
+
+    public PhrasePart getCounterPart(PhrasePart part) {
+        switch (part) {
+        case PREPOSITION:
+            return PhrasePart.VERB;
+        case VERB:
+            return PhrasePart.PREPOSITION;
+        default:
+            return null;
+        }
+    }
     public String getVerb() {
         return this.verb;
     }
